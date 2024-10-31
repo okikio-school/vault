@@ -24,15 +24,15 @@ class VaultDBHandler(context : Context?, name : String?, factory : SQLiteDatabas
         sqLiteDatabase.insert("Vaults", null, contentValues)
     }
 
-    fun getVaults(): List<Vault> {
+    fun getVaults(): Array<Vault> {
         return getVaultsByQuery("SELECT * FROM Vaults", null)
     }
 
-    fun searchVaults(searchQuery: String): List<Vault> {
+    fun searchVaults(searchQuery: String): Array<Vault> {
         return getVaultsByQuery("SELECT * FROM Vaults WHERE Vaults.TITLE LIKE '%$searchQuery%';", null)
     }
 
-    private fun getVaultsByQuery(query: String, args: Array<String>?): List<Vault> {
+    private fun getVaultsByQuery(query: String, args: Array<String>?): Array<Vault> {
         val sqLiteDatabase = this.readableDatabase
         val output: MutableList<Vault> = ArrayList<Vault>()
 
@@ -41,7 +41,6 @@ class VaultDBHandler(context : Context?, name : String?, factory : SQLiteDatabas
         val iID = results.getColumnIndex("ID")
         val iTITLE = results.getColumnIndex("TITLE")
         val iCONTENT = results.getColumnIndex("CONTENT")
-        val iCOLOUR = results.getColumnIndex("COLOUR")
 
         var currentID: Int
         var currentTitle: String?
@@ -56,7 +55,7 @@ class VaultDBHandler(context : Context?, name : String?, factory : SQLiteDatabas
         }
 
         results.close()
-        return output
+        return output.toTypedArray<Vault>()
     }
 
 }

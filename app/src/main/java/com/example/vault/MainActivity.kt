@@ -7,7 +7,9 @@ import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.vault.databinding.ActivityMainBinding
+import com.example.vault.databinding.FragmentHomeBinding
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,6 +31,13 @@ class MainActivity : AppCompatActivity() {
                 R.id.navigation_home, R.id.navigation_search, R.id.navigation_profile
             )
         )
+
+        //TODO: REMOVE DEBUG BUTTON
+        binding.tempAddButton.setOnClickListener {
+            val db = VaultDBHandler(this, "vaultdb", null, 1)
+            db.addVault(Vault("Default", "Example Text"))
+        }
+
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
     }

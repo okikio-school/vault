@@ -1,28 +1,43 @@
 package com.example.vault
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class VaultViewAdapter : RecyclerView.Adapter<VaultViewAdapter.VaultViewHolder>() {
+class VaultViewAdapter(private var vaultList : Array<Vault>) : RecyclerView.Adapter<VaultViewAdapter.VaultViewHolder>() {
+
+    //view holder class
+    class VaultViewHolder(vaultView: View) : RecyclerView.ViewHolder(vaultView) {
+        val titleOutput: TextView = vaultView.findViewById(R.id.titleView)
+        val contentOutput: TextView = vaultView.findViewById(R.id.contentView)
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VaultViewHolder {
-        TODO("Not yet implemented")
+        val viewRValue = R.layout.vault_thumbnail_view
+        return VaultViewHolder(
+            LayoutInflater.from(parent.context).inflate(R.layout.vault_thumbnail_view, parent, false)
+        )
     }
 
     override fun getItemCount(): Int {
-        TODO("Not yet implemented")
+        return vaultList.size
     }
 
     override fun onBindViewHolder(holder: VaultViewHolder, position: Int) {
-        TODO("Not yet implemented")
+        val vault : Vault = vaultList[position]
+        holder.titleOutput.text = vault.getTitle()
+        holder.contentOutput.text = vault.getContent()
     }
 
-    //view holder internal class
-    class VaultViewHolder(vaultView: View) : RecyclerView.ViewHolder(vaultView) {
-        var titleOutput: TextView = vaultView.findViewById<TextView>(R.id.titleView)
-        var contentOutput: TextView = vaultView.findViewById<TextView>(R.id.contentView)
-        var rootView: View = vaultView.rootView
+    @SuppressLint("NotifyDataSetChanged") //entire dataset can change
+    fun updateVaultList(newList: Array<Vault>) {
+        vaultList = newList
+        notifyDataSetChanged()
     }
+
 }
