@@ -2,15 +2,25 @@ package com.example.vault
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class VaultViewAdapter(private val context: Context, private var vaultList : List<Vault>) : RecyclerView.Adapter<VaultViewHolder>() {
+class VaultViewAdapter(private var vaultList : Array<Vault>) : RecyclerView.Adapter<VaultViewAdapter.VaultViewHolder>() {
+
+    //view holder class
+    class VaultViewHolder(vaultView: View) : RecyclerView.ViewHolder(vaultView) {
+        val titleOutput: TextView = vaultView.findViewById(R.id.titleView)
+        val contentOutput: TextView = vaultView.findViewById(R.id.contentView)
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VaultViewHolder {
+        val viewRValue = R.layout.vault_thumbnail_view
         return VaultViewHolder(
-            LayoutInflater.from(context).inflate(R.layout.vault_thumbnail_view, parent, false)
+            LayoutInflater.from(parent.context).inflate(R.layout.vault_thumbnail_view, parent, false)
         )
     }
 
@@ -20,14 +30,14 @@ class VaultViewAdapter(private val context: Context, private var vaultList : Lis
 
     override fun onBindViewHolder(holder: VaultViewHolder, position: Int) {
         val vault : Vault = vaultList[position]
-
         holder.titleOutput.text = vault.getTitle()
         holder.contentOutput.text = vault.getContent()
     }
 
     @SuppressLint("NotifyDataSetChanged") //entire dataset can change
-    fun updateVaultList(newList: List<Vault>) {
+    fun updateVaultList(newList: Array<Vault>) {
         vaultList = newList
         notifyDataSetChanged()
     }
+
 }

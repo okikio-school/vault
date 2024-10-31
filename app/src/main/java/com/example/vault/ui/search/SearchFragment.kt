@@ -34,8 +34,8 @@ class SearchFragment : Fragment() {
 
         _db = VaultDBHandler(activity, "vaultdb", null, 1)
 
-        binding.vaultsSearchViewer.setLayoutManager(LinearLayoutManager(context))
-        _vaultAdapter = VaultViewAdapter(requireContext(), _db!!.getVaults())
+        binding.vaultsSearchViewer.setLayoutManager(LinearLayoutManager(binding.vaultsSearchViewer.context))
+        _vaultAdapter = VaultViewAdapter(_db!!.getVaults())
         binding.vaultsSearchViewer.setAdapter(_vaultAdapter)
 
         val root: View = binding.root
@@ -53,7 +53,7 @@ class SearchFragment : Fragment() {
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
-                val newList: List<Vault> = _db!!.searchVaults(newText ?: "")
+                val newList: Array<Vault> = _db!!.searchVaults(newText ?: "")
                 _vaultAdapter!!.updateVaultList(newList)
                 return true
             }
