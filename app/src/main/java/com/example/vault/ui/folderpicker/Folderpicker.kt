@@ -1,4 +1,4 @@
-package com.example.vault.ui.search
+package com.example.vault.ui.folderpicker
 
 import android.app.Activity
 import android.content.Intent
@@ -14,6 +14,7 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
 import com.example.vault.R
 import com.google.android.material.button.MaterialButton
+
 private const val ARG_FOLDER_PATH = "folderpath"
 private const val ARG_FOLDER_NAME = "folder_name"
 
@@ -56,22 +57,22 @@ class Folderpicker : Fragment() {
 
     private fun openFolderPicker() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-        Launcher.launch(intent)
+        folderPickerLauncher.launch(intent)
     }
 
     // ActivityResultLauncher to handle folder picker result
-    private val Launcher = registerForActivityResult(
+    private val folderPickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
-                Log.i("folderpicker tag", "Directory tree: $uri")
+                Log.i("FolderPicker", "Directory tree: $uri")
                 displayContents(uri)
             } ?: run {
-                Log.e("FolderPicker tag", "No folder selected.")
+                Log.e("FolderPicker", "No folder selected.")
             }
         } else {
-            Log.e("FolderPicker tag", "Folder picker canceled.")
+            Log.e("FolderPicker", "Folder picker canceled.")
         }
     }
 

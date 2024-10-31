@@ -22,4 +22,11 @@
         android:name="com.example.vault.ui.profile.ProfileFragment"
         android:label="@string/title_profile"
         tools:layout="@layout/fragment_profile" />
+
+    <!-- mobile_navigation.xml -->
+    <fragment
+        android:id="@+id/navigation_folder_picker"
+        android:name="com.example.vault.ui.folderpicker.Folderpicker"
+        android:label="Folder Picker"
+        tools:layout="@layout/fragment_folderpicker2" />
 </navigation>
