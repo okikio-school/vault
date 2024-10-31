@@ -41,7 +41,6 @@ class VaultDBHandler(context : Context?, name : String?, factory : SQLiteDatabas
         val iID = results.getColumnIndex("ID")
         val iTITLE = results.getColumnIndex("TITLE")
         val iCONTENT = results.getColumnIndex("CONTENT")
-        val iCOLOUR = results.getColumnIndex("COLOUR")
 
         var currentID: Int
         var currentTitle: String?
