@@ -26,4 +26,14 @@
         android:layout_marginBottom="16dp"
         android:text="Pick a Folder" />
 
+    <TextView
+        android:id="@+id/VaultName"
+        android:layout_width="wrap_content"
+        android:layout_height="495dp"
+        android:layout_gravity="center"
+        android:padding="25dp"
+        android:text="Vault name:"
+        android:textColor="@android:color/black"
+        android:textSize="16sp" />
+
 </FrameLayout>
