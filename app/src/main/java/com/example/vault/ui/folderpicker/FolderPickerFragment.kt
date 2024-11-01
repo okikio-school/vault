@@ -8,26 +8,27 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
-import com.example.vault.R
-import com.google.android.material.button.MaterialButton
+import com.example.vault.databinding.FragmentFolderpickerBinding
 
 private const val ARG_FOLDER_PATH = "folderpath"
 private const val ARG_FOLDER_NAME = "folder_name"
 
 /**
  * A simple [Fragment] subclass to pick and display folder contents.
- * Use the [Folderpicker.newInstance] factory method to
+ * Use the [FolderPickerFragment.newInstance] factory method to
  * create an instance of this fragment with specific folder details.
  */
-class Folderpicker : Fragment() {
+class FolderPickerFragment : Fragment() {
 
     private var folder_Path: String? = null
     private var folder_Name: String? = null
     private lateinit var folderContentsTextView: TextView
+    private lateinit var binding: FragmentFolderpickerBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,19 +41,24 @@ class Folderpicker : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        val view = inflater.inflate(R.layout.fragment_folderpicker2, container, false)
+    ): View {
+        super.onCreateView(inflater, container, savedInstanceState)
+        binding = FragmentFolderpickerBinding.inflate(inflater, container, false)
 
         // Initialize UI elements
-        val folderPickerBtn: MaterialButton = view.findViewById(R.id.folderPickerButton)
-        folderContentsTextView = view.findViewById(R.id.folderContentsTextView)
+        val folderPickerBtn: Button = binding.folderPickerButton
+        folderContentsTextView = binding.folderContentsTextView
 
         folderPickerBtn.setOnClickListener {
             openFolderPicker()
         }
 
-        return view
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
     }
 
     private fun openFolderPicker() {
@@ -95,7 +101,7 @@ class Folderpicker : Fragment() {
          */
         @JvmStatic
         fun newInstance(folderPath: String, folderName: String) =
-            Folderpicker().apply {
+            FolderPickerFragment().apply {
                 arguments = Bundle().apply {
                     putString(ARG_FOLDER_PATH, folderPath)
                     putString(ARG_FOLDER_NAME, folderName)
