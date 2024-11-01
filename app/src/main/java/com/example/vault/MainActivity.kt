@@ -1,15 +1,24 @@
 package com.example.vault
 
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
+import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.documentfile.provider.DocumentFile
 import androidx.navigation.findNavController
+import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.vault.databinding.ActivityMainBinding
 import com.example.vault.databinding.FragmentHomeBinding
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : AppCompatActivity() {
 
@@ -21,9 +30,13 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val navView: BottomNavigationView = binding.navView
+        val navHostFragment = supportFragmentManager
+            .findFragmentById(R.id.nav_host_fragment_activity_main)
+        as NavHostFragment
 
-        val navController = findNavController(R.id.nav_host_fragment_activity_main)
+        val navController = navHostFragment.navController
+
+        val navView: BottomNavigationView = binding.navView
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         val appBarConfiguration = AppBarConfiguration(
@@ -32,13 +45,18 @@ class MainActivity : AppCompatActivity() {
             )
         )
 
-        //TODO: REMOVE DEBUG BUTTON
-        binding.tempAddButton.setOnClickListener {
-            val db = VaultDBHandler(this, "vaultdb", null, 1)
-            db.addVault(Vault("Default", "Example Text"))
-        }
-
-        setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
+        setupActionBarWithNavController(navController, appBarConfiguration)
+
+        // Configure the Floating Action Button (FAB) to open the folder picker
+        val fab: FloatingActionButton = binding.fabOpenFolderPicker
+        fab.setOnClickListener {
+            navController.navigate(R.id.navigation_folder_picker)
+        }
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        val navController = findNavController(R.id.nav_host_fragment_activity_main)
+        return navController.navigateUp() || super.onSupportNavigateUp()
     }
 }
