@@ -10,9 +10,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
+import androidx.navigation.findNavController
+import androidx.navigation.fragment.findNavController
+import com.example.vault.Vault
+import com.example.vault.VaultDBHandler
 import com.example.vault.databinding.FragmentFolderpickerBinding
 
 private const val ARG_FOLDER_PATH = "folderpath"
@@ -27,6 +32,9 @@ class FolderPickerFragment : Fragment() {
 
     private var folder_Path: String? = null
     private var folder_Name: String? = null
+
+    private var _db: VaultDBHandler? = null
+    private var currentPath: String? = null
     private lateinit var folderContentsTextView: TextView
     private lateinit var binding: FragmentFolderpickerBinding
 
@@ -45,12 +53,31 @@ class FolderPickerFragment : Fragment() {
         super.onCreateView(inflater, container, savedInstanceState)
         binding = FragmentFolderpickerBinding.inflate(inflater, container, false)
 
+        _db = VaultDBHandler(activity, "vaultdb", null, 1)
+
         // Initialize UI elements
         val folderPickerBtn: Button = binding.folderPickerButton
+        val encryptBtn: Button = binding.encryptButton
         folderContentsTextView = binding.folderContentsTextView
 
         folderPickerBtn.setOnClickListener {
             openFolderPicker()
+        }
+        encryptBtn.setOnClickListener {
+            val title:String = binding.editText.text.toString()
+            val location = currentPath
+
+            if (location == null) {
+                Toast.makeText(activity, "You must choose a folder first!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            //todo: add encryption functionality
+
+            val vault = Vault(title, location!!)
+            _db!!.addVault(vault)
+            Toast.makeText(activity, "Vault created.", Toast.LENGTH_SHORT).show()
+            this.findNavController().navigateUp()
         }
 
         return binding.root
@@ -73,6 +100,7 @@ class FolderPickerFragment : Fragment() {
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
                 Log.i("FolderPicker", "Directory tree: $uri")
+                currentPath = uri.path
                 displayContents(uri)
             } ?: run {
                 Log.e("FolderPicker", "No folder selected.")
