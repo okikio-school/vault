@@ -82,22 +82,38 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
         onSuccess: (ByteArray) -> Unit,
         onFailure: () -> Unit
     ) {
-        val sharedPreferences = context.getSharedPreferences("VaultPrefs", Context.MODE_PRIVATE)
-        val encryptedMasterKey = sharedPreferences.getString("encryptedMasterKey", null)
-            ?.split(",")?.map { it.toByte() }?.toByteArray()
-        val iv = sharedPreferences.getString("iv", null)
-            ?.split(",")?.map { it.toByte() }?.toByteArray()
+        try {
+            var encryptedMasterKey: ByteArray?
+            var iv: ByteArray?
 
-        if (encryptedMasterKey == null || iv == null) {
+            val generatedKey = generateMasterKey()
+            if (generatedKey != null) {
+                encryptedMasterKey = generatedKey.first
+                iv = generatedKey.second
+            } else {
+                val sharedPreferences =
+                    context.getSharedPreferences("VaultPrefs", Context.MODE_PRIVATE)
+                encryptedMasterKey = sharedPreferences.getString("encryptedMasterKey", null)
+                    ?.split(",")?.map { it.toByte() }?.toByteArray()
+                iv = sharedPreferences.getString("iv", null)
+                    ?.split(",")?.map { it.toByte() }?.toByteArray()
+            }
+
+            if (encryptedMasterKey == null || iv == null) {
+                onFailure()
+                return
+            }
+
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
+                init(Cipher.DECRYPT_MODE, getKeystoreKey(), GCMParameterSpec(128, iv))
+            }
+
+            onSuccess(cipher.doFinal(encryptedMasterKey))
+        } catch (e: Exception) {
+            println("Error decrypting master key: $e")
+            e.printStackTrace()
             onFailure()
-            return
         }
-
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
-            init(Cipher.DECRYPT_MODE, getKeystoreKey(), GCMParameterSpec(128, iv))
-        }
-
-        onSuccess(cipher.doFinal(encryptedMasterKey))
     }
 
     // Generates a keystore key in the Android Keystore.
@@ -118,7 +134,7 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
     }
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    fun generateMasterKey(): Pair<ByteArray, ByteArray>? {
+    private fun generateMasterKey(): Pair<ByteArray, ByteArray>? {
         val sharedPreferences = context.getSharedPreferences("VaultPrefs", Context.MODE_PRIVATE)
         if (sharedPreferences.contains("encryptedMasterKey")) {
             // Master key already exists
@@ -127,13 +143,22 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
 
         // Generate a new Libsodium master key
         val masterKey = LibsodiumRandom.buf(32)
+        require(masterKey.size == 32) { "Master key must be 32 bytes" }
 
         // Encrypt the master key using Android Keystore
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, generateKeystoreKey())
+        val secretKey = generateKeystoreKey()
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
 
-        val encryptedMasterKey = cipher.doFinal(masterKey.toByteArray())
+        val byteArrMasterKey = masterKey.toByteArray()
+        require(byteArrMasterKey.size == 32) { "Byte Array Master key must be 32 bytes" }
+
+        val encryptedMasterKey = cipher.doFinal(byteArrMasterKey)
         val iv = cipher.iv
+
+        // Validate encryption results
+        require(encryptedMasterKey.isNotEmpty()) { "Encrypted master key is empty" }
+        require(iv.size == 12) { "IV size must be 12 bytes for AES-GCM" }
 
         // Persist the encrypted master key and IV
         sharedPreferences.edit()
