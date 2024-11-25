@@ -199,7 +199,7 @@ class Session {
         }
 
         private fun fetchSessionToken(callback: (String?) -> Unit) {
-            val url = SESSION_URL
+            val url = AUTH_URL
             val cookieManager = android.webkit.CookieManager.getInstance()
             val cookies = cookieManager.getCookie(url) // Retrieves cookies for the domain
 
