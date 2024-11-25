@@ -8,6 +8,7 @@ import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import com.ionspin.kotlin.crypto.LibsodiumInitializer
 import com.ionspin.kotlin.crypto.secretbox.SecretBox
@@ -19,14 +20,16 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-class SecureKeyVault(private val context: Context, private val activity: FragmentActivity) {
+class SecureKeyVault(private val context: Context, private val activity: Fragment) {
 
     private val keyStoreAlias = "MasterKeyAlias"
 
-    suspend fun init() {
+    fun init(callback: () -> Unit) {
         // Initialize Libsodium
         if (!LibsodiumInitializer.isInitialized()) {
-            LibsodiumInitializer.initialize()
+            LibsodiumInitializer.initializeWithCallback(callback)
+        } else {
+            callback()
         }
     }
 
@@ -38,7 +41,7 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
         val biometricPrompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 super.onAuthenticationSucceeded(result)
-                decryptMasterKey(context, onSuccess, onFailure)
+                decryptMasterKey(onSuccess, onFailure)
                 Toast.makeText(context,
                     "Authentication succeeded!", Toast.LENGTH_LONG)
                     .show()
@@ -76,7 +79,6 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
 
     // Get the master key from SharedPreferences and decrypt it using the Android Keystore.
     private fun decryptMasterKey(
-        context: Context,
         onSuccess: (ByteArray) -> Unit,
         onFailure: () -> Unit
     ) {
@@ -115,9 +117,8 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
         return keyGenerator.generateKey()
     }
 
-
     @OptIn(ExperimentalUnsignedTypes::class)
-    fun generateMasterKey(context: Context): Pair<ByteArray, ByteArray>? {
+    fun generateMasterKey(): Pair<ByteArray, ByteArray>? {
         val sharedPreferences = context.getSharedPreferences("VaultPrefs", Context.MODE_PRIVATE)
         if (sharedPreferences.contains("encryptedMasterKey")) {
             // Master key already exists
