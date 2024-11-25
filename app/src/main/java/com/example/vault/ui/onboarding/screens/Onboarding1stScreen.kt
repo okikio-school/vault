@@ -25,7 +25,7 @@ class Onboarding1stScreen : Fragment() {
         view.findViewById<Button>(R.id.nextBtn1).setOnClickListener{
             viewPager?.currentItem = 1
         }
-TODO("IMPLEMENT THE CUSTOM VIEWS (onboarding_layout_view and onboarding_videointro_view) IN ALL THE ONBOARDING SCREENS")
+        //TODO("IMPLEMENT THE CUSTOM VIEWS (onboarding_layout_view and onboarding_videointro_view) IN ALL THE ONBOARDING SCREENS")
 
         return view
     }

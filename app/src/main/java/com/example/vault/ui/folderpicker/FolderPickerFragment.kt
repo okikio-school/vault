@@ -14,7 +14,6 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
 import com.example.vault.SecureKeyVault
 import com.example.vault.Vault
@@ -28,15 +27,10 @@ import com.ionspin.kotlin.crypto.secretbox.crypto_secretbox_NONCEBYTES
 private const val ARG_FOLDER_PATH = "folderpath"
 private const val ARG_FOLDER_NAME = "folder_name"
 
-/**
- * A simple [Fragment] subclass to pick and display folder contents.
- * Use the [FolderPickerFragment.newInstance] factory method to
- * create an instance of this fragment with specific folder details.
- */
 class FolderPickerFragment : Fragment() {
 
-    private var folder_Path: String? = null
-    private var folder_Name: String? = null
+    private var folderPath: String? = null
+    private var folderName: String? = null
 
     private var _db: VaultDBHandler? = null
     private var currentPath: String? = null
@@ -47,8 +41,8 @@ class FolderPickerFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            folder_Path = it.getString(ARG_FOLDER_PATH)
-            folder_Name = it.getString(ARG_FOLDER_NAME)
+            folderPath = it.getString(ARG_FOLDER_PATH)
+            folderName = it.getString(ARG_FOLDER_NAME)
         }
     }
 
@@ -220,7 +214,7 @@ class FolderPickerFragment : Fragment() {
         folderPickerLauncher.launch(intent)
     }
 
-    // ActivityResultLauncher to handle folder picker result
+    //handle folder picker result
     private val folderPickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
