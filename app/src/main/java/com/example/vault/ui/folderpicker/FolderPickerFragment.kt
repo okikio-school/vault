@@ -1,4 +1,4 @@
-package com.example.vault.ui.search
+package com.example.vault.ui.folderpicker
 
 import android.app.Activity
 import android.content.Intent
@@ -8,25 +8,35 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
-import com.example.vault.R
-import com.google.android.material.button.MaterialButton
+import androidx.navigation.findNavController
+import androidx.navigation.fragment.findNavController
+import com.example.vault.Vault
+import com.example.vault.VaultDBHandler
+import com.example.vault.databinding.FragmentFolderpickerBinding
+
 private const val ARG_FOLDER_PATH = "folderpath"
 private const val ARG_FOLDER_NAME = "folder_name"
 
 /**
  * A simple [Fragment] subclass to pick and display folder contents.
- * Use the [Folderpicker.newInstance] factory method to
+ * Use the [FolderPickerFragment.newInstance] factory method to
  * create an instance of this fragment with specific folder details.
  */
-class Folderpicker : Fragment() {
+class FolderPickerFragment : Fragment() {
 
     private var folder_Path: String? = null
     private var folder_Name: String? = null
+
+    private var _db: VaultDBHandler? = null
+    private var currentPath: String? = null
     private lateinit var folderContentsTextView: TextView
+    private lateinit var binding: FragmentFolderpickerBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,39 +49,64 @@ class Folderpicker : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        val view = inflater.inflate(R.layout.fragment_folderpicker2, container, false)
+    ): View {
+        super.onCreateView(inflater, container, savedInstanceState)
+        binding = FragmentFolderpickerBinding.inflate(inflater, container, false)
+
+        _db = VaultDBHandler(activity, "vaultdb", null, 1)
 
         // Initialize UI elements
-        val folderPickerBtn: MaterialButton = view.findViewById(R.id.folderPickerButton)
-        folderContentsTextView = view.findViewById(R.id.folderContentsTextView)
+        val folderPickerBtn: Button = binding.folderPickerButton
+        val encryptBtn: Button = binding.encryptButton
+        folderContentsTextView = binding.folderContentsTextView
 
         folderPickerBtn.setOnClickListener {
             openFolderPicker()
         }
+        encryptBtn.setOnClickListener {
+            val title:String = binding.editText.text.toString()
+            val location = currentPath
 
-        return view
+            if (location == null) {
+                Toast.makeText(activity, "You must choose a folder first!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            //todo: add encryption functionality
+
+            val vault = Vault(title, location!!)
+            _db!!.addVault(vault)
+            Toast.makeText(activity, "Vault created.", Toast.LENGTH_SHORT).show()
+            this.findNavController().navigateUp()
+        }
+
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
     }
 
     private fun openFolderPicker() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-        Launcher.launch(intent)
+        folderPickerLauncher.launch(intent)
     }
 
     // ActivityResultLauncher to handle folder picker result
-    private val Launcher = registerForActivityResult(
+    private val folderPickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
-                Log.i("folderpicker tag", "Directory tree: $uri")
+                Log.i("FolderPicker", "Directory tree: $uri")
+                currentPath = uri.path
                 displayContents(uri)
             } ?: run {
-                Log.e("FolderPicker tag", "No folder selected.")
+                Log.e("FolderPicker", "No folder selected.")
             }
         } else {
-            Log.e("FolderPicker tag", "Folder picker canceled.")
+            Log.e("FolderPicker", "Folder picker canceled.")
         }
     }
 
@@ -94,7 +129,7 @@ class Folderpicker : Fragment() {
          */
         @JvmStatic
         fun newInstance(folderPath: String, folderName: String) =
-            Folderpicker().apply {
+            FolderPickerFragment().apply {
                 arguments = Bundle().apply {
                     putString(ARG_FOLDER_PATH, folderPath)
                     putString(ARG_FOLDER_NAME, folderName)
