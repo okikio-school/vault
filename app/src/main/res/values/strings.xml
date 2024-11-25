@@ -3,6 +3,8 @@
     <string name="title_home">Home</string>
     <string name="title_search">Search</string>
     <string name="title_profile">Profile</string>
+
+    <string name="hello_blank_fragment">SPLASH SCREEN</string>
     <string name="contact_us">Contact Us</string>
     <string name="school_name">Ontario Tech University</string>
     <string name="setup">Setup License</string>
