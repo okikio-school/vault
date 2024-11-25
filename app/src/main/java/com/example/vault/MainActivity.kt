@@ -32,31 +32,35 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar);
 
-        val navHostFragment = supportFragmentManager
-            .findFragmentById(R.id.nav_host_fragment_activity_main)
-        as NavHostFragment
 
+        // Set up the Toolbar as the ActionBar
+        val toolbar = binding.toolbar
+        setSupportActionBar(toolbar)
+
+        val navHostFragment = supportFragmentManager
+            .findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
         val navController = navHostFragment.navController
 
         val navView: BottomNavigationView = binding.navView
-      
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
+
+        // Define top-level destinations
         val appBarConfiguration = AppBarConfiguration(
             setOf(
                 R.id.navigation_home, R.id.navigation_search, R.id.navigation_profile
             )
         )
 
+        // Setup navigation components
         navView.setupWithNavController(navController)
         setupActionBarWithNavController(navController, appBarConfiguration)
 
-        // Configure the Floating Action Button (FAB) to open the folder picker
+        // Configure the Floating Action Button (FAB) to navigate
         val fab: FloatingActionButton = binding.fabOpenFolderPicker
         fab.setOnClickListener {
             navController.navigate(R.id.navigation_folder_picker)
         }
     }
+
 
     override fun onSupportNavigateUp(): Boolean {
         val navController = findNavController(R.id.nav_host_fragment_activity_main)
