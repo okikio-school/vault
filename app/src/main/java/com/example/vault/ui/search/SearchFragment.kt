@@ -34,8 +34,8 @@ class SearchFragment : Fragment() {
 
         _db = VaultDBHandler(activity, "vaultdb", null, 1)
 
-        binding.vaultsSearchViewer.setLayoutManager(LinearLayoutManager(binding.vaultsSearchViewer.context))
         _vaultAdapter = VaultViewAdapter(_db!!.getVaults())
+        binding.vaultsSearchViewer.setLayoutManager(LinearLayoutManager(binding.vaultsSearchViewer.context))
         binding.vaultsSearchViewer.setAdapter(_vaultAdapter)
 
         val root: View = binding.root
