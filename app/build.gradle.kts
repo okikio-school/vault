@@ -62,10 +62,21 @@ dependencies {
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.androidx.activity)
+    implementation(libs.androidx.browser)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     implementation(libs.multiplatform.crypto.libsodium.bindings)
-    implementation("com.google.android.gms:play-services-maps:19.0.0")
+    implementation(libs.play.services.maps)
+
+    // define a BOM and its version
+    implementation(platform(libs.okhttp.bom))
+
+    implementation(libs.okhttp)
+    implementation(libs.logging.interceptor)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+    implementation(libs.multiplatform.crypto.libsodium.bindings)
+    implementation(libs.androidx.biometric)
 
 }
