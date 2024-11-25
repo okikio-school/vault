@@ -76,6 +76,7 @@
               app:destination="@id/navigation_home"
               app:popUpTo="@id/viewPagerFragment"
               app:popUpToInclusive="true" />
+      </fragment>
 
     <!-- mobile_navigation.xml -->
     <fragment
