@@ -22,16 +22,9 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-const val TAG_LENGTH = 16
-
 
 class EncryptionOutput(val cipherText: ByteArray,
                        val iv: ByteArray)
-
-
-
-private const val VaultSharedPrefAccessKey = "VaultSharedPrefs"
-private const val VaultEncryptedMasterKeyAccessKey = "encryptedMasterKey"
 
 
 class SecureKeyVault(private val context: Context, private val activity: Fragment) {
@@ -168,7 +161,6 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
                 try {
                     val cipher = result.cryptoObject?.cipher
                         ?: throw IllegalStateException("CryptoObject Cipher is null")
-                    cipher.init(Cipher.DECRYPT_MODE, getOrCreateKeystoreKey(), GCMParameterSpec(128, iv))
 
                     val masterKey = cipher.doFinal(encryptedMasterKey)
                     onSuccess(masterKey)
@@ -191,6 +183,7 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
 
         // Attach the CryptoObject to the BiometricPrompt
         val cryptoObject = BiometricPrompt.CryptoObject(cipher)
+        cipher.init(Cipher.DECRYPT_MODE, getOrCreateKeystoreKey(), GCMParameterSpec(128, iv))
 
         // Lets the user authenticate using either a Class 3 biometric or
         // their lock screen credential (PIN, pattern, or password).
