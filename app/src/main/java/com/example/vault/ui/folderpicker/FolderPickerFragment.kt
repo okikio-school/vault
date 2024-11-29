@@ -89,7 +89,7 @@ class FolderPickerFragment : Fragment() {
 
             //todo: add encryption functionality
             keyVault.init {
-                keyVault.authenticateWithKey(
+                keyVault.authenticate(
                     onSuccess = { masterKey ->
 
                         val message = "Hello, world!".encodeToUByteArray()
@@ -99,9 +99,15 @@ class FolderPickerFragment : Fragment() {
                         val decryptedData = keyVault.decryptData(encryptedData, nonce, masterKey)
                         println("Decrypted data: $decryptedData")
 
+                        Toast.makeText(context, "Authentication successful", Toast.LENGTH_LONG).show()
+
                     },
-                    onFailure = {
+                    onFailure = { error ->
                         println("Authentication failed or master key not found")
+                        println(error)
+
+
+                        Toast.makeText(context, "Authentication failed", Toast.LENGTH_LONG).show()
                     }
                 )
             }

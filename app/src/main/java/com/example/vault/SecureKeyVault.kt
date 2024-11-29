@@ -1,18 +1,17 @@
 package com.example.vault
 
 import android.content.Context
-import android.os.Build
-import android.security.KeyStoreException
+import android.content.SharedPreferences
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import android.widget.Toast
-import androidx.annotation.RequiresApi
+import android.util.Base64
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentActivity
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKeys
 import com.ionspin.kotlin.crypto.LibsodiumInitializer
 import com.ionspin.kotlin.crypto.secretbox.SecretBox
 import com.ionspin.kotlin.crypto.secretbox.crypto_secretbox_NONCEBYTES
@@ -26,17 +25,33 @@ import javax.crypto.spec.GCMParameterSpec
 const val TAG_LENGTH = 16
 
 
-class EncryptionOutput(val encryptedMasterKey: ByteArray,
-                       val iv: ByteArray,
-                       val tag: ByteArray,
-                       val ciphertext: ByteArray)
+class EncryptionOutput(val cipherText: ByteArray,
+                       val iv: ByteArray)
+
+
+
+private const val VaultSharedPrefAccessKey = "VaultSharedPrefs"
+private const val VaultEncryptedMasterKeyAccessKey = "encryptedMasterKey"
+
 
 class SecureKeyVault(private val context: Context, private val activity: Fragment) {
 
-    private val keyStoreAlias = "MasterKeyAlias"
+    companion object {
+        private const val ANDROID_KEYSTORE_PROVIDER = "AndroidKeyStore"
+        private const val VAULT_KEYSTORE_ALIAS = "VaultKeyStoreAlias"
+        private const val VAULT_PREFS_ACCESS_KEY = "VaultSharedPrefs"
+        private const val ENCRYPTED_MASTER_KEY_ACCESS_KEY = "EncryptedMasterKey"
+        private const val INITIALIZATION_VECTOR_ACCESS_KEY = "InitializationVector"
+        private val MASTER_KEY_ALIAS = MasterKeys.AES256_GCM_SPEC
 
+        private const val ENCRYPTION_BLOCK_MODE = KeyProperties.BLOCK_MODE_GCM
+        private const val ENCRYPTION_PADDING = KeyProperties.ENCRYPTION_PADDING_NONE
+        private const val ENCRYPTION_ALGORITHM = KeyProperties.KEY_ALGORITHM_AES
+        private const val ENCRYPTION_KEY_SIZE = 256
+    }
+
+    // Initialize Libsodium
     fun init(callback: () -> Unit) {
-        // Initialize Libsodium
         if (!LibsodiumInitializer.isInitialized()) {
             LibsodiumInitializer.initializeWithCallback(callback)
         } else {
@@ -44,165 +59,181 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
         }
     }
 
-    fun authenticateWithKey(
+    // Create EncryptedSharedPreferences instance
+    private fun getEncryptedPrefs(): SharedPreferences {
+        val masterKeyAlias = MasterKeys.getOrCreate(MASTER_KEY_ALIAS)
+        return EncryptedSharedPreferences.create(
+            VAULT_PREFS_ACCESS_KEY,
+            masterKeyAlias,
+            context,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
+
+    // Retrieve or generate a master key
+    fun authenticate(
         onSuccess: (ByteArray) -> Unit,
-        onFailure: () -> Unit
+        onFailure: (String) -> Unit
+    ) {
+        val encryptedPrefs = getEncryptedPrefs()
+
+        // Check if master key exists
+        val encryptedMasterKeyBase64 = encryptedPrefs.getString(ENCRYPTED_MASTER_KEY_ACCESS_KEY, null)
+        val masterKeyInitializationVectorBase64 = encryptedPrefs.getString(INITIALIZATION_VECTOR_ACCESS_KEY, null)
+        if (encryptedMasterKeyBase64 != null && masterKeyInitializationVectorBase64 != null) {
+            // Decrypt and return the existing master key
+            val encryptedMasterKey = Base64.decode(encryptedMasterKeyBase64, Base64.DEFAULT)
+            val iv = Base64.decode(masterKeyInitializationVectorBase64, Base64.DEFAULT)
+            accessMasterKeyUsingBiometrics(encryptedMasterKey, iv, onSuccess, onFailure)
+        } else {
+            // Generate and store a new master key
+            generateMasterKeyUsingBiometrics(encryptedPrefs, onSuccess, onFailure)
+        }
+    }
+
+    @OptIn(ExperimentalUnsignedTypes::class)
+    private fun generateMasterKeyUsingBiometrics(
+        encryptedPrefs: SharedPreferences,
+        onSuccess: (ByteArray) -> Unit,
+        onFailure: (String) -> Unit
     ) {
         val executor = ContextCompat.getMainExecutor(context)
         val biometricPrompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 super.onAuthenticationSucceeded(result)
-                decryptMasterKey(result.cryptoObject?.cipher, onSuccess, onFailure)
-                Toast.makeText(context,
-                    "Authentication succeeded!", Toast.LENGTH_LONG)
-                    .show()
+                try {
+                    val cipher = result.cryptoObject?.cipher
+                        ?: throw IllegalStateException("CryptoObject Cipher is null")
+
+                    // Generate a 32-byte master key using LibSodium
+                    val masterKey = LibsodiumRandom.buf(32).toByteArray()
+                    require(masterKey.size == 32) { "Master key must be 32 bytes" }
+
+                    // Encrypt the master key using the Keystore
+                    val encryptedMasterKey = cipher.doFinal(masterKey)
+                    val iv = cipher.iv
+
+                    val encryptedMasterKeyBase64 = Base64.encodeToString(encryptedMasterKey, Base64.DEFAULT)
+                    val ivBase64 = Base64.encodeToString(iv, Base64.DEFAULT)
+
+                    // Store the encrypted master key
+                    encryptedPrefs.edit().run {
+                        putString(ENCRYPTED_MASTER_KEY_ACCESS_KEY, encryptedMasterKeyBase64)
+                        putString(INITIALIZATION_VECTOR_ACCESS_KEY, ivBase64)
+                    }.apply()
+                    onSuccess(masterKey)
+                } catch (e: Exception) {
+                    onFailure("Failed to generate and store master key: ${e.message}")
+                }
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                super.onAuthenticationError(errorCode, errString)
-                // Handle errors
-                onFailure()
-                Toast.makeText(context,
-                    "Authentication error: $errString", Toast.LENGTH_LONG)
-                    .show()
+                onFailure("Authentication error: $errString")
             }
 
             override fun onAuthenticationFailed() {
-                super.onAuthenticationFailed()
-                // Handle failed attempts
-                onFailure()
-                Toast.makeText(context, "Authentication failed",
-                    Toast.LENGTH_LONG)
-                    .show()
+                onFailure("Authentication failed")
             }
         })
+
+        // Get a cipher for encryption
+        val cipher = getCipher()
+        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKeystoreKey())
+
+        // Attach the CryptoObject to the BiometricPrompt
+        val cryptoObject = BiometricPrompt.CryptoObject(cipher)
 
         // Lets the user authenticate using either a Class 3 biometric or
         // their lock screen credential (PIN, pattern, or password).
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Authenticate")
-            .setSubtitle("Use your fingerprint to access the master key")
+            .setTitle("Authenticate to Generate Master Key")
+            .setSubtitle("Use your biometric credential")
             .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
             .build()
 
-        biometricPrompt.authenticate(promptInfo)
+        biometricPrompt.authenticate(promptInfo, cryptoObject)
     }
 
-    // Get the master key from SharedPreferences and decrypt it using the Android Keystore.
-    private fun decryptMasterKey(
-        cipherObj: Cipher?,
+    private fun accessMasterKeyUsingBiometrics(
+        encryptedMasterKey: ByteArray,
+        iv: ByteArray,
         onSuccess: (ByteArray) -> Unit,
-        onFailure: () -> Unit
+        onFailure: (String) -> Unit
     ) {
-        try {
-            val cipher = cipherObj ?: throw IllegalStateException("CryptoObject Cipher is null")
+        val executor = ContextCompat.getMainExecutor(context)
+        val biometricPrompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                try {
+                    val cipher = result.cryptoObject?.cipher
+                        ?: throw IllegalStateException("CryptoObject Cipher is null")
+                    cipher.init(Cipher.DECRYPT_MODE, getOrCreateKeystoreKey(), GCMParameterSpec(128, iv))
 
-            var encryptedMasterKey: ByteArray?
-            var cipherText: ByteArray?
-            var tag: ByteArray?
-            var iv: ByteArray?
-
-            val generatedKey = generateMasterKey(cipher)
-            if (generatedKey != null) {
-                encryptedMasterKey = generatedKey.encryptedMasterKey
-                cipherText = generatedKey.ciphertext
-                tag = generatedKey.tag
-                iv = generatedKey.iv
-            } else {
-                val sharedPreferences =
-                    context.getSharedPreferences("VaultPrefs", Context.MODE_PRIVATE)
-                encryptedMasterKey = sharedPreferences.getString("encryptedMasterKey", null)
-                    ?.split(",")?.map { it.toByte() }?.toByteArray()
-                cipherText = sharedPreferences.getString("cipherText", null)
-                    ?.split(",")?.map { it.toByte() }?.toByteArray()
-                tag = sharedPreferences.getString("tag", null)
-                    ?.split(",")?.map { it.toByte() }?.toByteArray()
-                iv = sharedPreferences.getString("iv", null)
-                    ?.split(",")?.map { it.toByte() }?.toByteArray()
+                    val masterKey = cipher.doFinal(encryptedMasterKey)
+                    onSuccess(masterKey)
+                } catch (e: Exception) {
+                    onFailure("Decryption failed: ${e.message}")
+                }
             }
 
-            if (encryptedMasterKey == null || iv == null || tag == null || cipherText == null) {
-                onFailure()
-                return
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                onFailure("Authentication error: $errString")
             }
 
-            val spec = GCMParameterSpec(TAG_LENGTH * 8, iv)
-//            val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
-//
-//            }
+            override fun onAuthenticationFailed() {
+                onFailure("Authentication failed")
+            }
+        })
 
-            cipher.init(Cipher.DECRYPT_MODE, getKeystoreKey(), spec)
+        // Get a cipher for decryption
+        val cipher = getCipher()
 
-            onSuccess(cipher.doFinal(cipherText + tag))
-        } catch (e: Exception) {
-            println("Error decrypting master key: $e")
-            e.printStackTrace()
-            onFailure()
-        }
+        // Attach the CryptoObject to the BiometricPrompt
+        val cryptoObject = BiometricPrompt.CryptoObject(cipher)
+
+        // Lets the user authenticate using either a Class 3 biometric or
+        // their lock screen credential (PIN, pattern, or password).
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Authenticate to Access Master Key")
+            .setSubtitle("Use your biometric credential")
+            .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+            .build()
+
+        biometricPrompt.authenticate(promptInfo, cryptoObject)
     }
 
-    @OptIn(ExperimentalUnsignedTypes::class)
-    private fun generateMasterKey(cipher: Cipher): EncryptionOutput? {
-        val sharedPreferences = context.getSharedPreferences("VaultPrefs", Context.MODE_PRIVATE)
-        if (sharedPreferences.contains("encryptedMasterKey")) {
-            // Master key already exists
-            return null
-        }
-
-        // Generate a new Libsodium master key
-        val masterKey = LibsodiumRandom.buf(32)
-        require(masterKey.size == 32) { "Master key must be 32 bytes" }
-
-        // Encrypt the master key using Android Keystore
-        val secretKey = generateKeystoreKey()
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-
-        val byteArrMasterKey = masterKey.toByteArray()
-        require(byteArrMasterKey.size == 32) { "Byte Array Master key must be 32 bytes" }
-
-        val iv = cipher.iv.copyOf()
-        val encryptedMasterKey = cipher.doFinal(byteArrMasterKey)
-        val ciphertext = encryptedMasterKey.copyOfRange(0, encryptedMasterKey.size - TAG_LENGTH)
-        val tag = encryptedMasterKey.copyOfRange(encryptedMasterKey.size - TAG_LENGTH, encryptedMasterKey.size)
-
-        // Validate encryption results
-        require(encryptedMasterKey.isNotEmpty()) { "Encrypted master key is empty" }
-        require(iv.size == 12) { "IV size must be 12 bytes for AES-GCM" }
-
-        // Persist the encrypted master key and IV
-        sharedPreferences.edit()
-            .putString("encryptedMasterKey", encryptedMasterKey.joinToString(",") { it.toString() })
-            .putString("cipherText", ciphertext.joinToString(",") { it.toString() })
-            .putString("tag", tag.joinToString(",") { it.toString() })
-            .putString("iv", iv.joinToString(",") { it.toString() })
-            .apply()
-
-        return EncryptionOutput(encryptedMasterKey, iv, tag, ciphertext)
+    // Get a cipher for encryption and/or decryption
+    private fun getCipher(): Cipher {
+        val transformation = "$ENCRYPTION_ALGORITHM/$ENCRYPTION_BLOCK_MODE/$ENCRYPTION_PADDING"
+        return Cipher.getInstance(transformation)
     }
 
-    // Generates a keystore key in the Android Keystore.
-    private fun generateKeystoreKey(): SecretKey {
-        val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+    private fun getOrCreateKeystoreKey(): SecretKey {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE_PROVIDER).apply { load(null) }
+        return keyStore.getKey(VAULT_KEYSTORE_ALIAS, null) as? SecretKey
+            ?: createKeystoreKey()
+    }
+
+    private fun createKeystoreKey(): SecretKey {
+        val keyGenerator = KeyGenerator.getInstance(ENCRYPTION_ALGORITHM, ANDROID_KEYSTORE_PROVIDER)
         keyGenerator.init(
             KeyGenParameterSpec.Builder(
-                keyStoreAlias,
+                VAULT_KEYSTORE_ALIAS,
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
             )
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setBlockModes(ENCRYPTION_BLOCK_MODE)
+                .setEncryptionPaddings(ENCRYPTION_PADDING)
+                .setKeySize(ENCRYPTION_KEY_SIZE)
                 .setUserAuthenticationRequired(true) // Enforces user authentication
                 .setInvalidatedByBiometricEnrollment(false) // Prevents invalidation when biometrics change
                 .build()
         )
+
         return keyGenerator.generateKey()
     }
 
-    private fun getKeystoreKey(): SecretKey? {
-        val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        return keyStore.getKey(keyStoreAlias, null) as? SecretKey
-    }
-
-    // Encrypts data using Libsodium and a key fetched from Keystore.
+    // Encrypts data using Libsodium and the master key fetched from EncryptedSharedPreferences.
     @OptIn(ExperimentalUnsignedTypes::class)
     fun encryptData(data: UByteArray, masterKey: ByteArray): Pair<UByteArray, UByteArray> {
         val nonce = LibsodiumRandom.buf(crypto_secretbox_NONCEBYTES)
@@ -210,7 +241,7 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
         return Pair(encryptedData, nonce) // Save nonce with encrypted data
     }
 
-    // Decrypts data using Libsodium and a key fetched from Keystore.
+    // Decrypts data using Libsodium and the master key fetched from EncryptedSharedPreferences.
     @OptIn(ExperimentalUnsignedTypes::class)
     fun decryptData(encryptedData: UByteArray, nonce: UByteArray, masterKey: ByteArray): UByteArray {
         return SecretBox.openEasy(encryptedData, nonce, masterKey.toUByteArray())
