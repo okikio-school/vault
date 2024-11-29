@@ -22,11 +22,6 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-
-class EncryptionOutput(val cipherText: ByteArray,
-                       val iv: ByteArray)
-
-
 class SecureKeyVault(private val context: Context, private val activity: Fragment) {
 
     companion object {

@@ -24,6 +24,7 @@ import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import com.ionspin.kotlin.crypto.secretbox.crypto_secretbox_NONCEBYTES
 import com.ionspin.kotlin.crypto.util.encodeToUByteArray
+import java.nio.charset.Charset
 
 private const val ARG_FOLDER_PATH = "folderpath"
 private const val ARG_FOLDER_NAME = "folder_name"
@@ -97,7 +98,9 @@ class FolderPickerFragment : Fragment() {
                         println("Encrypted data: $encryptedData")
 
                         val decryptedData = keyVault.decryptData(encryptedData, nonce, masterKey)
-                        println("Decrypted data: $decryptedData")
+                        println("Decrypted data bytes: $decryptedData")
+                        println("Decrypted data: ${String(decryptedData.toByteArray(), Charset.forName("UTF-8"))}")
+
 
                         Toast.makeText(context, "Authentication successful", Toast.LENGTH_LONG).show()
 
