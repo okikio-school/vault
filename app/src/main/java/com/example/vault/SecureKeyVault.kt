@@ -309,8 +309,12 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
      * Preserves the folder structure using DocumentFile.
      */
     @OptIn(ExperimentalUnsignedTypes::class)
-    fun encryptDocumentFolder(folder: DocumentFile, vaultKey: ByteArray, masterKey: ByteArray): Pair<DocumentFile, ByteArray> {
-        val vaultNonce = generateNonce()
+    fun encryptDocumentFolder(
+        folder: DocumentFile,
+        vaultKey: ByteArray,
+        masterKey: ByteArray,
+        vaultNonce: UByteArray = generateNonce()
+    ): Pair<DocumentFile, ByteArray> {
         folder.listFiles().forEach { file ->
             if (file.isFile) {
 

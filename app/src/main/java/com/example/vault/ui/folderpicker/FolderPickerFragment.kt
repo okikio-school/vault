@@ -92,22 +92,11 @@ class FolderPickerFragment : Fragment() {
                             path=encryptedFolder.uri.toString(),
                             encryptedKey=masterKey,
                             vaultNonce=vaultNonce,
+                            mode="encrypted"
                         )
 
                         _db!!.addVault(vault)
                         println("Folder encrypted at: ${encryptedFolder.uri}")
-
-//                        val encryptedFolderUri = Uri.parse("${currentPath}_encrypted")
-//                        val encryptedDocumentFolder = getDocumentFolder(encryptedFolderUri)
-
-//                        // Decrypt the folder
-//                        val decryptedFolder = decryptDocumentFolder(
-//                            encryptedFolder = encryptedDocumentFolder,
-//                            vaultKey = masterKey,
-//                            masterKey = masterKey,
-//                            vaultNonce = vaultNonce
-//                        )
-//                        println("Folder decrypted at: ${decryptedFolder.uri}")
 
                         Toast.makeText(context, "Authentication successful", Toast.LENGTH_LONG).show()
                         this@FolderPickerFragment.findNavController().navigateUp()
