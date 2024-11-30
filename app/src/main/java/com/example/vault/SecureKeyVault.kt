@@ -1,6 +1,7 @@
 package com.example.vault
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.security.keystore.KeyGenParameterSpec
@@ -400,19 +401,54 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
 
     /**
      * Retrieves a DocumentFile representing a folder based on the provided URI.
+     * Ensures the folder is accessible and persists permissions for future access.
      *
      * @param folderUri The SAF URI for the folder.
+     * @param persistPermissions Whether to persist read/write permissions for the folder URI.
      * @return The DocumentFile object representing the folder.
      * @throws IllegalArgumentException If the URI is invalid or the folder does not exist.
      */
-    fun getDocumentFolder(folderUri: Uri): DocumentFile {
+    fun getDocumentFolder(folderUri: Uri, persistPermissions: Boolean = true): DocumentFile {
+        // Persist permissions if requested
+        if (persistPermissions) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    folderUri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (e: SecurityException) {
+                throw IllegalArgumentException("Failed to persist permissions for URI: $folderUri", e)
+            }
+        }
+
+        // Retrieve the DocumentFile for the folder
         val documentFolder = DocumentFile.fromTreeUri(context, folderUri)
 
-        // Ensure the folder exists
+        // Validate the folder
         if (documentFolder == null || !documentFolder.isDirectory) {
             throw IllegalArgumentException("The folder does not exist or is not a valid directory: $folderUri")
         }
 
+        // Check if the folder is accessible
+        if (!isUriAccessible(documentFolder.uri)) {
+            throw IllegalArgumentException("The folder is not accessible: $folderUri")
+        }
+
         return documentFolder
     }
+
+    /**
+     * Checks if a URI is accessible by attempting to open a stream.
+     *
+     * @param uri The URI to check.
+     * @return True if the URI is accessible, false otherwise.
+     */
+    private fun isUriAccessible(uri: Uri): Boolean {
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { true } ?: false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
 }

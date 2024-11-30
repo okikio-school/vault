@@ -73,7 +73,7 @@ class VaultViewAdapter(private var db: VaultDatabase, private var keyVault: Secu
                         println("Decrypted data: ${String(decryptedData.toByteArray(), Charset.forName("UTF-8"))}")
 
                         val encryptedFolderUri = Uri.parse(currentPath)
-                        val encryptedDocumentFolder = keyVault.getDocumentFolder(encryptedFolderUri)
+                        val encryptedDocumentFolder = keyVault.getDocumentFolder(encryptedFolderUri, persistPermissions = true)
 
                         println("Folder: $encryptedDocumentFolder")
                         println("folderUri: $encryptedFolderUri")

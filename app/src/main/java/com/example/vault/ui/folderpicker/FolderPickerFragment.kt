@@ -74,7 +74,7 @@ class FolderPickerFragment : Fragment() {
                         println("Decrypted data: ${String(decryptedData.toByteArray(), Charset.forName("UTF-8"))}")
 
                         val folderUri = Uri.parse(currentPath)
-                        val documentFolder = keyVault.getDocumentFolder(folderUri)
+                        val documentFolder = keyVault.getDocumentFolder(folderUri, persistPermissions = true)
 
                         println("Folder: $documentFolder")
                         println("folderUri: $folderUri")
@@ -117,7 +117,13 @@ class FolderPickerFragment : Fragment() {
     }
 
     private fun openFolderPicker() {
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+            )
+        }
         folderPickerLauncher.launch(intent)
     }
 
@@ -128,13 +134,24 @@ class FolderPickerFragment : Fragment() {
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
                 Log.i("FolderPicker", "Directory tree: $uri")
-                currentPath = uri.path
+                currentPath = uri.toString() // Store the full URI string
+                persistFolderPermission(uri) // Persist permissions for the selected folder
                 displayContents(uri)
             } ?: run {
                 Log.e("FolderPicker", "No folder selected.")
             }
         } else {
             Log.e("FolderPicker", "Folder picker canceled.")
+        }
+    }
+
+    private fun persistFolderPermission(uri: Uri) {
+        try {
+            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            requireContext().contentResolver.takePersistableUriPermission(uri, takeFlags)
+            Log.i("FolderPicker", "Persisted permissions for URI: $uri")
+        } catch (e: SecurityException) {
+            Log.e("FolderPicker", "Failed to persist permissions for URI: $uri", e)
         }
     }
 
