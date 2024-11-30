@@ -87,7 +87,16 @@ class VaultDatabase(context : Context?, name : String?, factory : SQLiteDatabase
             val encryptedKey = results.getBlob(ENCRYPTED_KEY_COL)
             val vaultNonce = results.getBlob(VAULT_NONCE_COL)
 
-            vaults.add(Vault(id, path, title, description, encryptedKey, vaultNonce))
+            vaults.add(
+                Vault(
+                    id=id,
+                    title=title,
+                    description=description,
+                    path=path,
+                    encryptedKey=encryptedKey,
+                    vaultNonce=vaultNonce
+                )
+            )
         }
 
         results.close()

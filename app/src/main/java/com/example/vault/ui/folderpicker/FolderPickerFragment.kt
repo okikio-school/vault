@@ -88,8 +88,8 @@ class FolderPickerFragment : Fragment() {
 
                         val vault = Vault(
                             title=title,
-                            path=encryptedFolder.uri.toString(),
                             description = "Encrypted folder: $title",
+                            path=encryptedFolder.uri.toString(),
                             encryptedKey=masterKey,
                             vaultNonce=vaultNonce,
                         )

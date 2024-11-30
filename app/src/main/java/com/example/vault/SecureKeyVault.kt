@@ -6,6 +6,7 @@ import android.net.Uri
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
@@ -61,24 +62,43 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
         )
     }
 
+    // Check if the device supports biometrics or device credentials
+    private fun canAuthenticate(): Boolean {
+        val biometricManager = BiometricManager.from(context)
+        val canAuthenticate = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+        return canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS
+    }
+
     // Retrieve or generate a master key
     fun authenticate(
         onSuccess: (ByteArray) -> Unit,
         onFailure: (String) -> Unit
     ) {
-        val encryptedPrefs = getEncryptedPrefs()
+        try {
+            if (!canAuthenticate()) {
+                onFailure("Device does not support biometrics or device credentials")
+                return
+            }
 
-        // Check if master key exists
-        val encryptedMasterKeyBase64 = encryptedPrefs.getString(ENCRYPTED_MASTER_KEY_ACCESS_KEY, null)
-        val masterKeyInitializationVectorBase64 = encryptedPrefs.getString(INITIALIZATION_VECTOR_ACCESS_KEY, null)
-        if (encryptedMasterKeyBase64 != null && masterKeyInitializationVectorBase64 != null) {
-            // Decrypt and return the existing master key
-            val encryptedMasterKey = Base64.decode(encryptedMasterKeyBase64, Base64.DEFAULT)
-            val iv = Base64.decode(masterKeyInitializationVectorBase64, Base64.DEFAULT)
-            accessMasterKeyUsingBiometrics(encryptedMasterKey, iv, onSuccess, onFailure)
-        } else {
-            // Generate and store a new master key
-            generateMasterKeyUsingBiometrics(encryptedPrefs, onSuccess, onFailure)
+            val encryptedPrefs = getEncryptedPrefs()
+
+            // Check if master key exists
+            val encryptedMasterKeyBase64 =
+                encryptedPrefs.getString(ENCRYPTED_MASTER_KEY_ACCESS_KEY, null)
+            val masterKeyInitializationVectorBase64 =
+                encryptedPrefs.getString(INITIALIZATION_VECTOR_ACCESS_KEY, null)
+
+            if (encryptedMasterKeyBase64 != null && masterKeyInitializationVectorBase64 != null) {
+                // Decrypt and return the existing master key
+                val encryptedMasterKey = Base64.decode(encryptedMasterKeyBase64, Base64.DEFAULT)
+                val iv = Base64.decode(masterKeyInitializationVectorBase64, Base64.DEFAULT)
+                accessMasterKeyUsingBiometrics(encryptedMasterKey, iv, onSuccess, onFailure)
+            } else {
+                // Generate and store a new master key
+                generateMasterKeyUsingBiometrics(encryptedPrefs, onSuccess, onFailure)
+            }
+        } catch (e: Exception) {
+            onFailure("Failed to authenticate: ${e.message}")
         }
     }
 
@@ -216,6 +236,10 @@ class SecureKeyVault(private val context: Context, private val activity: Fragmen
                 .setEncryptionPaddings(ENCRYPTION_PADDING)
                 .setKeySize(ENCRYPTION_KEY_SIZE)
                 .setUserAuthenticationRequired(true) // Enforces user authentication
+                .setUserAuthenticationParameters(
+                    0, // Duration for which the key is usable after authentication (0 for immediate re-authentication)
+                    KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL // Allow both biometrics and device credentials
+                )
                 .setInvalidatedByBiometricEnrollment(false) // Prevents invalidation when biometrics change
                 .build()
         )

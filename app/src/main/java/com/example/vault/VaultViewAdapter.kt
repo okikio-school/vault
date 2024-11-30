@@ -41,6 +41,8 @@ class VaultViewAdapter(private var vaultList : List<Vault>, private var keyVault
         val encryptedKey = vault.encryptedKey
         val vaultNonce = vault.vaultNonce
 
+        println("Vault: $vault")
+
         holder.titleOutput.text = title
         holder.contentOutput.text = vault.description
 
