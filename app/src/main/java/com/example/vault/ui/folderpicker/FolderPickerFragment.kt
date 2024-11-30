@@ -52,7 +52,7 @@ class FolderPickerFragment : Fragment() {
             openFolderPicker()
         }
         encryptBtn.setOnClickListener {
-            val title = binding.VaultName.text.toString()
+            val title = binding.editText.text.toString()
             println("Encrypt Title: $title")
             println("Encrypt Current path: $currentPath")
             if (currentPath == null) {
