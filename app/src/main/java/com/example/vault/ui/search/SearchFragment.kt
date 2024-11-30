@@ -5,20 +5,20 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.SearchView
-import androidx.appcompat.widget.SearchView.OnQueryTextListener
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.NavHostFragment
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.vault.Vault
-import com.example.vault.VaultDBHandler
+import com.example.vault.SecureKeyVault
+import com.example.vault.db.Vault
+import com.example.vault.db.VaultDatabase
 import com.example.vault.VaultViewAdapter
 import com.example.vault.databinding.FragmentSearchBinding
 
 class SearchFragment : Fragment() {
 
     private var _binding: FragmentSearchBinding? = null
-    private var _db : VaultDBHandler? = null
+    private var _db : VaultDatabase? = null
     private var _vaultAdapter : VaultViewAdapter? = null
+    private lateinit var keyVault: SecureKeyVault
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -32,9 +32,12 @@ class SearchFragment : Fragment() {
 
         _binding = FragmentSearchBinding.inflate(inflater, container, false)
 
-        _db = VaultDBHandler(activity, "vaultdb", null, 1)
+        _db = VaultDatabase(activity, "vaultdb", null)
 
-        _vaultAdapter = VaultViewAdapter(_db!!.getVaults())
+        keyVault = SecureKeyVault(requireContext(), this)
+        keyVault.init {}
+
+        _vaultAdapter = VaultViewAdapter(_db!!.getVaults(), keyVault)
         binding.vaultsSearchViewer.setLayoutManager(LinearLayoutManager(binding.vaultsSearchViewer.context))
         binding.vaultsSearchViewer.setAdapter(_vaultAdapter)
 
@@ -53,7 +56,7 @@ class SearchFragment : Fragment() {
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
-                val newList: Array<Vault> = _db!!.searchVaults(newText ?: "")
+                val newList: List<Vault> = _db!!.searchVaults(newText ?: "")
                 _vaultAdapter!!.updateVaultList(newList)
                 return true
             }

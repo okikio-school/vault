@@ -1,12 +1,8 @@
 package com.example.vault
 
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import android.content.Intent
-import android.media.MediaPlayer
 import android.widget.Button
 import android.widget.MediaController
 import android.widget.VideoView
@@ -29,9 +25,9 @@ class IntroActivity : AppCompatActivity() {
         videoView.setMediaController(mediaController)
 
         // Auto-start the video
-        videoView.setOnPreparedListener(MediaPlayer.OnPreparedListener {
+        videoView.setOnPreparedListener {
             videoView.start()
-        })
+        }
 
         // Handle "Get Started" button
         getStartedButton.setOnClickListener {
